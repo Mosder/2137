@@ -4,5 +4,9 @@ interface Controls {
     left: string;
     right: string;
 }
+interface ToAnimate {
+    added: { x: number, y: number, val: number }[];
+    moved: { prevX: number, prevY: number, x: number, y: number, val: number }[];
+}
 
-export { Controls };
+export { Controls, ToAnimate };
