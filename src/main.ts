@@ -7,6 +7,8 @@ let controls = {
     right: "ArrowRight"
 }
 let game = new Game(controls, 4);
+let playing = false;
+let interval: NodeJS.Timer;
 
 document.body.addEventListener("keyup", (e) => {
     let key = parseInt(e.key);
@@ -21,9 +23,24 @@ document.body.addEventListener("keyup", (e) => {
         return;
     let dirs = ["up", "down", "left", "right"];
     let count = 0;
-    let interval = setInterval(() => {
+    let int = setInterval(() => {
         game.move(dirs[Math.floor(Math.random() * 4)]);
         if (++count >= 100)
-            clearInterval(interval);
+            clearInterval(int);
     }, 10);
+});
+
+document.body.addEventListener("keyup", (e) => {
+    if (e.key !== "t")
+        return;
+    let dirs = ["up", "down", "left", "right"];
+	if (!playing) {
+    	interval = setInterval(() => {
+       		game.move(dirs[Math.floor(Math.random() * 4)]);
+    	}, 10);
+	}
+	else {
+		clearInterval(interval);
+	}
+	playing = !playing;
 });
