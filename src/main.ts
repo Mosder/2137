@@ -7,8 +7,10 @@ let controls = {
     right: "ArrowRight"
 }
 let game = new Game(controls, 4);
-let playing = false;
 let interval: NodeJS.Timer;
+let playing = false;
+let moves = 0;
+let time = 0;
 
 document.body.addEventListener("keyup", (e) => {
     let key = parseInt(e.key);
@@ -19,28 +21,35 @@ document.body.addEventListener("keyup", (e) => {
 });
 
 document.body.addEventListener("keyup", (e) => {
-    if (e.key !== "r")
-        return;
-    let dirs = ["up", "down", "left", "right"];
-    let count = 0;
-    let int = setInterval(() => {
-        game.move(dirs[Math.floor(Math.random() * 4)]);
-        if (++count >= 100)
-            clearInterval(int);
-    }, 10);
+    if (e.key === 'r')
+        playGame(10);
+    else if (e.key === 't')
+        playGame();
 });
 
-document.body.addEventListener("keyup", (e) => {
-    if (e.key !== "t")
-        return;
+function playGame(speed?: number) {
     let dirs = ["up", "down", "left", "right"];
-	if (!playing) {
-    	interval = setInterval(() => {
-       		game.move(dirs[Math.floor(Math.random() * 4)]);
-    	}, 10);
-	}
-	else {
-		clearInterval(interval);
-	}
-	playing = !playing;
-});
+    playing = !playing;
+    if (playing) {
+        if (speed === undefined)
+            speed = parseInt(prompt("Enter interval delay"));
+        if (!Number.isInteger(speed)) {
+            alert("idiot");
+            playing = !playing;
+            return;
+        }
+        time = Date.now();
+        interval = setInterval(() => {
+            if (!playing) {
+                clearInterval(interval);
+                return;
+            }
+            game.move(dirs[Math.floor(Math.random() * 4)]);
+            moves++;
+        }, speed);
+    }
+    else {
+        console.log(`Did ${moves} moves in ${(Date.now() - time) / 1000} seconds`);
+        moves = 0;
+    }
+}

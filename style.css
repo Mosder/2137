@@ -6,3 +6,9 @@
     border: 2px solid black;
     overflow: hidden;
 }
+
+#scoreParent {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}

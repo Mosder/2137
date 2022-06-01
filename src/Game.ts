@@ -1,6 +1,7 @@
-import { ctx, baseValue, tileColors } from "./consts";
+import { ctx, baseValue, tileColors, papaj } from "./consts";
 import { Tile } from "./Tile";
 import { Controls, ToAnimate } from "./interfaces";
+import { NumberLiteralType } from "../node_modules/typescript/lib/typescript";
 
 class Game {
     tiles: Tile[];
@@ -11,6 +12,8 @@ class Game {
         added: [],
         moved: []
     };
+    moves: number = 0;
+    score: number = 0;
 
     constructor(controls: Controls, boardSize: number) {
         this.boardSize = boardSize;
@@ -19,6 +22,8 @@ class Game {
         this.addTile();
         this.addTile();
         this.setupMovement(controls);
+        this.setupCanvas();
+        this.drawLines();
     }
 
     setupMovement(controls: Controls) {
@@ -43,109 +48,84 @@ class Game {
             for (const tile of currentTiles) {
                 let tilePos = (sense + 1) / 2 * (this.boardSize - 1);
                 for (; tile[dir] != tilePos; tilePos -= sense) {
-                    if (currentTiles.filter(t => t[dir] === tilePos).length === 0) {
-                        let toA = {
-                            prevX: tile.x,
-                            prevY: tile.y,
-                            x: 0,
-                            y: 0,
-                            val: tile.val
-                        }
+                    const tileToCheck = currentTiles.filter(t => t[dir] === tilePos)[0];
+                    const nextTileToCheck = currentTiles.filter(t => t[dir] === tilePos - sense)[0];
+                    let toA = { prevX: tile.x, prevY: tile.y, x: 0, y: 0, val: tile.val };
+                    if (tileToCheck === undefined) {
                         tile[dir] = tilePos;
                         toA.x = tile.x;
                         toA.y = tile.y
                         this.toAnimate.moved.push(toA);
                         break;
                     }
-                    else if ((currentTiles.filter(t => t[dir] === tilePos - sense).length === 0 ||
-                        currentTiles.filter(t => t[dir] === tilePos - sense)[0] === tile)
-                        && currentTiles.filter(t => t[dir] === tilePos)[0].val === tile.val) {
+                    else if ((nextTileToCheck === undefined || nextTileToCheck === tile) && tileToCheck.val === tile.val) {
                         this.tiles = this.tiles.filter(t => t !== tile);
                         currentTiles = currentTiles.filter(t => t !== tile);
-                        currentTiles.filter(t => t[dir] === tilePos)[0].val++;
-                        this.toAnimate.moved.push({
-                            prevX: tile.x,
-                            prevY: tile.y,
-                            x: currentTiles.filter(t => t[dir] === tilePos)[0].x,
-                            y: currentTiles.filter(t => t[dir] === tilePos)[0].y,
-                            val: tile.val
-                        });
+                        tileToCheck.val++;
+                        this.score += 2 * baseValue * 2 ** tile.val;
+                        toA.x = tileToCheck.x;
+                        toA.y = tileToCheck.y;
+                        this.toAnimate.moved.push(toA);
                         break;
                     }
                 }
             }
         }
-        if (this.tiles.length !== this.boardSize ** 2)
+        if (this.tiles.length !== this.boardSize ** 2) {
+            this.moves++;
             this.addTile();
+        }
     }
 
     update() {
+        document.getElementById("score").innerText = this.score.toString();
         let stage = 0;
         let interval = setInterval(() => {
-            if (stage == 20) {
+            this.drawLines();
+            if (stage > 20) {
                 this.toAnimate = {
                     added: [],
                     moved: []
                 };
-                clearInterval(interval);
                 this.setupCanvas();
                 this.drawTiles();
-                this.drawLines();
+                clearInterval(interval);
             }
-            else if (stage >= 10) {
+            else if (stage > 9) {
                 for (const newTile of this.toAnimate.added) {
-                    ctx.fillStyle = '#' + tileColors[newTile.val];
                     let x = newTile.x + (20 - stage) / 20;
                     let y = newTile.y + (20 - stage) / 20;
                     let size = this.squareSize * (stage - 10) / 10;
-                    ctx.fillRect(x * this.squareSize, y * this.squareSize, size, size);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = `${120 / this.boardSize * (stage - 10) / 10}px Arial`;
-                    ctx.textAlign = "center";
-                    ctx.fillText((baseValue * 2 ** newTile.val).toString(),
-                        (x + 0.5 * (stage - 10) / 10) * this.squareSize, (y + 0.55 * (stage - 10) / 10) * this.squareSize);
+                    this.drawTile(newTile.val, x, y, size);
                 }
             }
             else {
-                this.drawLines();
                 for (const movedTile of this.toAnimate.moved) {
-                    let x = movedTile.x;
-                    let y = movedTile.y;
-                    let prevX = movedTile.x;
-                    let prevY = movedTile.y;
-                    if (movedTile.prevX !== movedTile.x) {
-                        let diff = Math.abs(movedTile.prevX - movedTile.x);
-                        let sense = movedTile.prevX > movedTile.x ? -1 : 1;
-                        x = movedTile.prevX + stage * diff / 10 * sense;
-                        prevX = movedTile.prevX + (stage - 1) * diff / 10 * sense;
-                    }
-                    else {
-                        let diff = Math.abs(movedTile.prevY - movedTile.y);
-                        let sense = movedTile.prevY > movedTile.y ? -1 : 1;
-                        y = movedTile.prevY + stage * diff / 10 * sense;
-                        prevY = movedTile.prevY + (stage - 1) * diff / 10 * sense;
-                    }
-                    ctx.fillStyle = "#777";
-                    ctx.fillRect(prevX * this.squareSize, prevY * this.squareSize, this.squareSize, this.squareSize);
-                    ctx.fillStyle = '#' + tileColors[movedTile.val];
-                    ctx.fillRect(x * this.squareSize, y * this.squareSize, this.squareSize, this.squareSize);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = `${120 / this.boardSize}px Arial`;
-                    ctx.textAlign = "center";
-                    ctx.fillText((baseValue * 2 ** movedTile.val).toString(), (x + 0.5) * this.squareSize, (y + 0.55) * this.squareSize);
+                    let [prevX, x] = this.getMovingCoords(movedTile.prevX, movedTile.x, stage);
+                    let [prevY, y] = this.getMovingCoords(movedTile.prevY, movedTile.y, stage);
+                    this.clearTile(prevX, prevY);
+                    this.drawTile(movedTile.val, x, y, this.squareSize);
                 }
-                if (stage == 9) {
+                if (stage === 9) {
                     this.setupCanvas();
                     this.drawTiles();
-                    this.drawLines();
                     for (const newTile of this.toAnimate.added) {
-                        ctx.fillStyle = "#777";
-                        ctx.fillRect(newTile.x * this.squareSize, newTile.y * this.squareSize, this.squareSize, this.squareSize);
+                        this.clearTile(newTile.x, newTile.y);
                     }
                 }
             }
+            this.drawLines();
             stage++;
         }, 10);
+    }
+
+    getMovingCoords(prev: number, now: number, stage: number) {
+        let diff = Math.abs(prev - now);
+        let sense = prev > now ? -1 : 1;
+        let stageDist = diff * sense / 10;
+        let p = prev + stage * stageDist;
+        let n = p + stageDist;
+        return [p, n];
     }
 
     setupCanvas() {
@@ -154,12 +134,12 @@ class Game {
     }
 
     addTile() {
-        let x = Math.floor(Math.random() * this.boardSize);
-        let y = Math.floor(Math.random() * this.boardSize);
-        while (this.tiles.filter(tile => tile.x == x && tile.y == y).length > 0) {
+        let x: number;
+        let y: number;
+        do {
             x = Math.floor(Math.random() * this.boardSize);
             y = Math.floor(Math.random() * this.boardSize);
-        }
+        } while (this.tiles.filter(tile => tile.x == x && tile.y == y).length > 0);
         let tile = new Tile(x, y);
         this.tiles.push(tile);
         this.toAnimate.added.push({ x, y, val: tile.val });
@@ -170,13 +150,29 @@ class Game {
 
     drawTiles() {
         for (const tile of this.tiles) {
-            ctx.fillStyle = '#' + tileColors[tile.val];
-            ctx.fillRect(tile.x * this.squareSize, tile.y * this.squareSize, this.squareSize, this.squareSize);
-            ctx.fillStyle = "#fff";
-            ctx.font = `${120 / this.boardSize}px Arial`;
-            ctx.textAlign = "center";
-            ctx.fillText((baseValue * 2 ** tile.val).toString(), (tile.x + 0.5) * this.squareSize, (tile.y + 0.55) * this.squareSize);
+            this.drawTile(tile.val, tile.x, tile.y, this.squareSize);
         }
+    }
+
+    drawTile(val: number, x: number, y: number, size: number) {
+        let ratio = size / this.squareSize;
+        if (val !== 10) {
+            ctx.fillStyle = '#' + tileColors[val < 10 ? val : 10];
+            ctx.fillRect(x * this.squareSize, y * this.squareSize, size, size);
+        }
+        else {
+            ctx.drawImage(papaj, x * this.squareSize, y * this.squareSize, size, size);
+            return;
+        }
+        ctx.font = `${(120 / this.boardSize) * ratio}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.fillText((baseValue * 2 ** val).toString(), (x + 0.5 * ratio) * this.squareSize, (y + 0.55 * ratio) * this.squareSize);
+    }
+
+    clearTile(x: number, y: number) {
+        ctx.fillStyle = "#777";
+        ctx.fillRect(x * this.squareSize, y * this.squareSize, this.squareSize, this.squareSize);
     }
 
     drawLines() {
@@ -226,7 +222,7 @@ class Game {
     die() {
         this.ded = true;
         setTimeout(() => {
-            window.alert("You die lol");
+            window.alert(`You die lol\nMoves: ${this.moves}\nScore: ${this.score}`);
             window.location.reload();
         }, 300);
     }

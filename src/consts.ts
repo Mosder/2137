@@ -12,6 +12,8 @@ const tileColors = [
     "a8d47a",
     "3ba740",
     "810081"
-]
+];
+const papaj = new Image();
+papaj.src = "./assets/gfx/papaj.jpg";
 
-export { ctx, baseValue, tileColors };
+export { ctx, baseValue, tileColors, papaj };
