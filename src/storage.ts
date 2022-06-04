@@ -28,7 +28,7 @@ function setHighScore(board: number, high: Highscore) {
     highs[board - 2] = high;
     let str = "";
     for (const h of highs)
-        str += `${h.name}:${h.score},`;
+        str += `${h.name == '' ? "John Doe" : h.name}:${h.score},`;
     str = str.slice(0, -1);
     localStorage.setItem(storageKey, str);
 }
