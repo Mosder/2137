@@ -1,9 +1,14 @@
 import { ctx, baseValue, tileColors, papaj } from "./consts";
 import { Tile } from "./Tile";
 import { Controls, ToAnimate } from "./interfaces";
-import { NumberLiteralType } from "../node_modules/typescript/lib/typescript";
+import { getAllHighscores, setHighScore } from "./storage";
 
 class Game {
+    before: {
+        tiles: Tile[],
+        score: number,
+        moves: number
+    }
     tiles: Tile[];
     boardSize: number;
     ded: boolean = false;
@@ -14,6 +19,7 @@ class Game {
     };
     moves: number = 0;
     score: number = 0;
+    cheated: boolean = false;
 
     constructor(controls: Controls, boardSize: number) {
         this.boardSize = boardSize;
@@ -24,20 +30,33 @@ class Game {
         this.setupMovement(controls);
         this.setupCanvas();
         this.drawLines();
+        this.before = {
+            tiles: this.tiles,
+            score: 0,
+            moves: 0,
+        }
     }
 
     setupMovement(controls: Controls) {
         document.body.addEventListener("keyup", (e) => {
             if (this.ded)
                 return;
-            for (const [direction, key] of Object.entries(controls))
-                if (e.key == key)
-                    this.move(direction);
+            if (e.key === controls.back)
+                this.fuckGoBack();
+            else
+                for (const [direction, key] of Object.entries(controls))
+                    if (e.key === key)
+                        this.move(direction);
         });
 
     }
 
     move(direction: string) {
+        let before = {
+            tiles: this.tiles.map(tile => { return Object.assign(Object.create(Object.getPrototypeOf(tile)), tile) }),
+            score: this.score,
+            moves: this.moves
+        };
         let dirInfo = this.getDirFromString(direction);
         let dir = dirInfo.dir as keyof Tile;
         let otherDir = dirInfo.otherDir as keyof Tile;
@@ -74,6 +93,7 @@ class Game {
         if (this.tiles.length !== this.boardSize ** 2) {
             this.moves++;
             this.addTile();
+            this.before = before;
         }
     }
 
@@ -156,12 +176,15 @@ class Game {
 
     drawTile(val: number, x: number, y: number, size: number) {
         let ratio = size / this.squareSize;
-        if (val !== 10) {
+        if (val < 10) {
             ctx.fillStyle = '#' + tileColors[val < 10 ? val : 10];
             ctx.fillRect(x * this.squareSize, y * this.squareSize, size, size);
         }
         else {
-            ctx.drawImage(papaj, x * this.squareSize, y * this.squareSize, size, size);
+            let div = val - 9;
+            for (let i = 0; i < val - 9; i++)
+                for (let j = 0; j < val - 9; j++)
+                    ctx.drawImage(papaj, (x + i / div) * this.squareSize, (y + j / div) * this.squareSize, size / div, size / div);
             return;
         }
         ctx.font = `${(120 / this.boardSize) * ratio}px Arial`;
@@ -219,10 +242,30 @@ class Game {
         this.die();
     }
 
+    fuckGoBack() {
+        this.cheated = true;
+        this.tiles = this.before.tiles;
+        this.moves = this.before.moves;
+        this.score = this.before.score;
+        document.getElementById("score").innerText = this.score.toString();
+        this.setupCanvas();
+        this.drawTiles();
+        this.drawLines();
+    }
+
     die() {
         this.ded = true;
         setTimeout(() => {
-            window.alert(`You die lol\nMoves: ${this.moves}\nScore: ${this.score}`);
+            let str = `You die lol\nMoves: ${this.moves}\nScore: ${this.score}`;
+            if (this.score > getAllHighscores()[this.boardSize - 2].score) {
+                str += "\nThat's new highscore! ";
+                if (this.cheated)
+                    window.alert(`${str}But you cheated L`);
+                else
+                    setHighScore(this.boardSize, { name: window.prompt(`${str}Enter your name:`), score: this.score });
+            }
+            else
+                window.alert(str);
             window.location.reload();
         }, 300);
     }

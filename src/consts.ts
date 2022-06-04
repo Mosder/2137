@@ -1,7 +1,6 @@
 const ctx = (document.getElementById("game") as HTMLCanvasElement).getContext("2d");
 const baseValue = 2.0869140625;
 const tileColors = [
-    "603814",
     "ff1e26",
     "f6aab7",
     "55cdfd",
@@ -15,5 +14,6 @@ const tileColors = [
 ];
 const papaj = new Image();
 papaj.src = "./assets/gfx/papaj.jpg";
+const storageKey = "2137-highscores";
 
-export { ctx, baseValue, tileColors, papaj };
+export { ctx, baseValue, tileColors, papaj, storageKey };
